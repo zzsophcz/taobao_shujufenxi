@@ -64,7 +64,7 @@ class TbSpider(RedisSpider):
                 meta={"selenium": 'True',"pic_url": pic_url,'keyword': keyword},
                 cookies=response.request.cookies
             )
-            break
+            # break
         # next_url=response.urljoin(item.xpath('./a/@href').extract_first())
         # #提交翻页请求
         # yield scrapy.Request(
@@ -103,13 +103,13 @@ class TbSpider(RedisSpider):
         item['Sales']=self.clean_sales(item['Sales'])#转化成整型好进行数据分析
         #合并信息
         item['pro_info']=', '.join(response.xpath('//div[contains(@class,"isSelected") and contains(@class,"valueItem")]//text()').getall())
-        print("商品链接",item['link'])
-        print("价格", item['price'])
-        print("标题", item['title'])
-        print("图片链接", item['pic_link'])
-        print("店名", item['shore_name'])
-        print("销量", item['Sales'])
-        print("商品描述", item['pro_info'])
+        # print("商品链接",item['link'])
+        # print("价格", item['price'])
+        # print("标题", item['title'])
+        # print("图片链接", item['pic_link'])
+        # print("店名", item['shore_name'])
+        # print("销量", item['Sales'])
+        # print("商品描述", item['pro_info'])
         yield item
 
 
