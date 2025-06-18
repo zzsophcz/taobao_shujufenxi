@@ -66,7 +66,21 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    "TBspider.pipelines.TbspiderPipeline": 300,
+#开启此管道会将数据存入Redis数据库中
+    'scrapy_redis.pipelines.RedisPipeline' : 400,
 }
+#分布式爬虫配置文件固定参数
+#设置重复过滤器的模块，（使用scrapy-redis提供的去重类）
+DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+# 使用scrapy-redis提供的调度器，这个调度器具备和数据库交互的功能
+SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+#设置当爬虫结束的时候是否保持redis数据库中的去重集合与任务队列(不清空redis数据库)
+SCHEDULER_PERSIST=True
+
+#设置redis数据库
+REDIS_URL="redis://127.0.0.1:6379"
+#设置下载延迟
+DOWNLOAD_DELAY=1
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

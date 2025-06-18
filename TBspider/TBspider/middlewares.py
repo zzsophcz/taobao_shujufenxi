@@ -132,7 +132,7 @@ class SeleniumSpiderMiddleware(object):
             url=driver.current_url,
             body=html,
             encoding='utf-8',
-            request=request
+            request=request #这里是为了保留原请求的meta参数
         )
 
     def enter_detail(self, request):

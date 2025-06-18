@@ -16,4 +16,5 @@ class TbspiderItem(scrapy.Item):
     shore_name = scrapy.Field()
     Sales = scrapy.Field()
     pro_info=scrapy.Field()
+    keyword=scrapy.Field()
     pass

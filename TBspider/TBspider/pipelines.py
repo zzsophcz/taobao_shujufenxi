@@ -12,10 +12,10 @@ import re
 
 class TbspiderPipeline:
     def open_spider(self, spider):
-        print(f"管道启动，关键词是：{spider.keyword}")
-        # 获取关键词并处理为表名
-        raw_keyword = spider.keyword
-        self.table_name = f"tb_{self.clean_table_name(raw_keyword)}"
+        print("管道启动!")
+        # # 获取关键词并处理为表名
+        # raw_keyword = spider.keyword
+        # self.table_name = f"tb_{self.clean_table_name(raw_keyword)}"
 
         # 连接数据库
         self.conn = pymysql.connect(
@@ -27,17 +27,17 @@ class TbspiderPipeline:
             charset='utf8mb4'
         )
         self.cursor = self.conn.cursor()
-
-        # 创建表（如果不存在）
-        self.create_table_if_not_exists()
+        self.created_tables = set()  # 记录已创建过的表，避免重复创建
 
     def clean_table_name(self, keyword):
         # 将关键词转为合法表名：去除空格、特殊符号，仅保留字母数字下划线
         return re.sub(r'\W+', '_', keyword.strip())
 
-    def create_table_if_not_exists(self):
+    def create_table_if_not_exists(self, table_name):
+        if table_name in self.created_tables:
+            return
         create_sql = f"""
-        CREATE TABLE IF NOT EXISTS `{self.table_name}` (
+        CREATE TABLE IF NOT EXISTS `{table_name}` (
             id INT PRIMARY KEY AUTO_INCREMENT,
             title VARCHAR(255),
             price FLOAT,
@@ -49,12 +49,20 @@ class TbspiderPipeline:
         ) CHARSET=utf8mb4;
         """
         self.cursor.execute(create_sql)
+        self.created_tables.add(table_name)
 
     def process_item(self, item, spider):
+        raw_keyword = item.get('keyword')
+        if not raw_keyword:
+            raise ValueError("item中必须包含'keyword'字段，用于动态表名")
+        table_name = f"tb_{self.clean_table_name(raw_keyword)}"
+        self.create_table_if_not_exists(table_name)
+
         print(f"管道处理item: {item['title']}")
-        print(f"准备写入数据库，表名：{self.table_name}")
+        print(f"准备写入数据库，表名：{table_name}")
+
         insert_sql = f"""
-        INSERT INTO `{self.table_name}` (title, price, sales, shop, link, pic_url, description)
+        INSERT INTO `{table_name}` (title, price, sales, shop, link, pic_url, description)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         data = (

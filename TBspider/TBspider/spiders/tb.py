@@ -3,18 +3,24 @@ import os
 import pickle
 import urllib.parse
 from TBspider.items import TbspiderItem
+from scrapy_redis.spiders import RedisSpider
 
-class TbSpider(scrapy.Spider):
+class TbSpider(RedisSpider):
     name = "tb"
-    allowed_domains = ["taobao.com"]
+    # allowed_domains = ["taobao.com"]
+    redis_key='tb:start_urls'
 
     def __init__(self, keyword=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if keyword is None:
-            raise ValueError("请使用 -a keyword=xxx 指定搜索关键词")
-        self.keyword = keyword#方便后续取用
-        encoded = urllib.parse.quote(keyword)
-        self.start_urls = [f"https://s.taobao.com/search?q={encoded}"]
+
+        domain = kwargs.pop('domain', '')
+        self.allowed_domains = list(filter(None, domain.split(',')))
+        super(TbSpider,self).__init__(*args, **kwargs)
+
+        # if keyword is None:
+        #     raise ValueError("请使用 -a keyword=xxx 指定搜索关键词")
+        # self.keyword = keyword#方便后续取用
+        # encoded = urllib.parse.quote(keyword)
+        # self.start_urls = [f"https://s.taobao.com/search?q={encoded}"]
 
     def parse(self, response):
         # 加载 cookies（只在首次请求时用）
@@ -27,11 +33,13 @@ class TbSpider(scrapy.Spider):
 
         cookies_dict = {c['name']: c['value'] for c in cookies_list}
 
+        #接受命令行中的关键词
+        keyword = response.meta.get('keyword')
         # 构造一个新的请求（携带 cookie）
         yield scrapy.Request(
             url=response.url,
             callback=self.parseSearch,
-            meta={"selenium": "search"},
+            meta={"selenium": "search",'keyword': keyword},
             cookies=cookies_dict,
             dont_filter=True
         )
@@ -43,6 +51,9 @@ class TbSpider(scrapy.Spider):
         #     f.write(response.text)
         product_list=response.xpath('//*[@id="content_items_wrapper"]/div')
         print("一共有",len(product_list),"个商品")
+        #保留关键词以便动态建表名
+        keyword = response.meta.get('keyword')
+
         for item in product_list:
             detail_url=response.urljoin(item.xpath('./a/@href').extract_first())
             pic_url=item.xpath('.//img[@class="mainPic--Ds3X7I8z"]/@src').extract_first()
@@ -50,7 +61,7 @@ class TbSpider(scrapy.Spider):
             yield scrapy.Request(
                 url=detail_url,
                 callback=self.parseDetail,
-                meta={"selenium": 'True',"pic_url": pic_url},
+                meta={"selenium": 'True',"pic_url": pic_url,'keyword': keyword},
                 cookies=response.request.cookies
             )
             break
@@ -79,6 +90,7 @@ class TbSpider(scrapy.Spider):
     def parseDetail(self, response):
         print("进入详情页面:",response.url)
         item=TbspiderItem()
+        item['keyword'] = response.meta.get('keyword')
         item['link']=response.url
         item['price']=response.xpath('//div[@class="_4nNipe17pV--highlightPrice--fea17cf4"]/span[last()]/text()').extract_first()
         item['price']=int(float(item['price']))#转化成整型好进行数据分析
