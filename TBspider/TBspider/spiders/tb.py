@@ -2,6 +2,7 @@ import scrapy
 import os
 import pickle
 import urllib.parse
+from TBspider.items import TbspiderItem
 
 class TbSpider(scrapy.Spider):
     name = "tb"
@@ -29,17 +30,51 @@ class TbSpider(scrapy.Spider):
         yield scrapy.Request(
             url=response.url,
             callback=self.parseSearch,
-            meta={"selenium": "True"},
+            meta={"selenium": "search"},
             cookies=cookies_dict,
             dont_filter=True
         )
 
     def parseSearch(self, response):
         print("进入搜索页面：",response.url)
+        # # #保存网页源代码
+        # with open("搜索页面.html", "w", encoding="utf-8") as f:
+        #     f.write(response.text)
         product_list=response.xpath('//*[@id="content_items_wrapper"]/div')
-        print("一共有"+len(product_list)+"个商品")
-        for item in product_list.split("\n"):
+        print("一共有",len(product_list),"个商品")
+        for item in product_list:
             detail_url=response.urljoin(item.xpath('./a/@href').extract_first())
-            print(detail_url)
+            pic_url=item.xpath('.//img[@class="mainPic--Ds3X7I8z"]/@src').extract_first()
+            #对每个详情页面提交请求，准备爬取数据
+            yield scrapy.Request(
+                url=detail_url,
+                callback=self.parseDetail,
+                meta={"selenium": 'True',"pic_url": pic_url},
+                cookies=response.request.cookies
+            )
             break
-        # yield scrapy.Request(url=search_url, callback=self.parseSearch)
+        # next_url=response.urljoin(item.xpath('./a/@href').extract_first())
+        # #提交翻页请求
+        # yield scrapy.Request(
+        #     url=next_url,
+        #     callback=self.parseSearch,
+        #     meta={"selenium": "True"},
+        #     cookies=response.request.cookies
+        #     )
+
+    def parseDetail(self, response):
+        print("进入详情页面:",response.url)
+        item=TbspiderItem()
+        item['link']=response.url
+        item['price']=response.xpath('//div[@class="_4nNipe17pV--highlightPrice--fea17cf4"]/span[last()]/text()').extract_first()
+        item['title']=response.xpath('//h1/text()').extract_first()
+        item['pic_link']=response.meta['pic_url']
+        item['shore_name']=response.xpath('//span[@class="_4nNipe17pV--shopName--ccf81bdd"]/text()').extract_first()
+        item['Sales']=(response.xpath('//div[contains(@class,"salesDesc")]/text()').extract_first()).split()[-1]
+        print("商品链接",item['link'])
+        print("价格", item['price'])
+        print("标题", item['title'])
+        print("图片链接", item['pic_link'])
+        print("店名", item['shore_name'])
+        print("销量", item['Sales'])
+

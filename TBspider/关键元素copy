@@ -2,3 +2,43 @@
 //*[@id="content_items_wrapper"]
 #每个商品
 //*[@id="content_items_wrapper"]/div
+#最后一页的下一页
+<button aria-label="下一页，当前第8页" type="button" disabled="" class="next-btn next-medium next-btn-normal next-pagination-item next-next"><span class="next-btn-helper">下一页</span><i class="next-icon next-icon-arrow-right next-xs next-btn-icon next-icon-last next-pagination-icon-next"></i></button>
+#普通页的下一页
+<button aria-label="下一页，当前第1页" type="button" class="next-btn next-medium next-btn-normal next-pagination-item next-next"><span class="next-btn-helper">下一页</span><i class="next-icon next-icon-arrow-right next-xs next-btn-icon next-icon-last next-pagination-icon-next"></i></button>
+#价格
+//div[@class="_4nNipe17pV--highlightPrice--fea17cf4"]
+//div[@class="_4nNipe17pV--highlightPrice--fea17cf4"]/span[last()]
+<div class="_4nNipe17pV--highlightPrice--fea17cf4" style="color: rgb(255, 80, 0);"><span class="_4nNipe17pV--symbol--_81697cc">¥</span><span class="_4nNipe17pV--text--_4c1ce7d">419</span></div>
+#
+<div class="_4nNipe17pV--salesDesc--dd0678cc"><div class="_4nNipe17pV--dot--f3b2516e">·</div>已售 22</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
