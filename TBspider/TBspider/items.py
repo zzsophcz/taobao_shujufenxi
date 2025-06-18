@@ -15,4 +15,5 @@ class TbspiderItem(scrapy.Item):
     pic_link = scrapy.Field()
     shore_name = scrapy.Field()
     Sales = scrapy.Field()
+    pro_info=scrapy.Field()
     pass

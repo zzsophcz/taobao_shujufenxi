@@ -12,6 +12,7 @@ class TbSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         if keyword is None:
             raise ValueError("请使用 -a keyword=xxx 指定搜索关键词")
+        self.keyword = keyword#方便后续取用
         encoded = urllib.parse.quote(keyword)
         self.start_urls = [f"https://s.taobao.com/search?q={encoded}"]
 
@@ -62,19 +63,42 @@ class TbSpider(scrapy.Spider):
         #     cookies=response.request.cookies
         #     )
 
+    @staticmethod
+    def clean_sales(sales_str):
+        """
+        将销量1万+转化成10000
+        :param sales_str:想要清洗的字符串
+        :return:转化后的整型数字
+        """
+        sales_str = sales_str.replace('+', '')  # 去掉 '+'
+        if '万' in sales_str:
+            return int(float(sales_str.replace('万', '')) * 10000)
+        else:
+            return int(float(sales_str))
+
     def parseDetail(self, response):
         print("进入详情页面:",response.url)
         item=TbspiderItem()
         item['link']=response.url
         item['price']=response.xpath('//div[@class="_4nNipe17pV--highlightPrice--fea17cf4"]/span[last()]/text()').extract_first()
+        item['price']=int(float(item['price']))#转化成整型好进行数据分析
+
         item['title']=response.xpath('//h1/text()').extract_first()
         item['pic_link']=response.meta['pic_url']
         item['shore_name']=response.xpath('//span[@class="_4nNipe17pV--shopName--ccf81bdd"]/text()').extract_first()
+
         item['Sales']=(response.xpath('//div[contains(@class,"salesDesc")]/text()').extract_first()).split()[-1]
+        item['Sales']=self.clean_sales(item['Sales'])#转化成整型好进行数据分析
+        #合并信息
+        item['pro_info']=', '.join(response.xpath('//div[contains(@class,"isSelected") and contains(@class,"valueItem")]//text()').getall())
         print("商品链接",item['link'])
         print("价格", item['price'])
         print("标题", item['title'])
         print("图片链接", item['pic_link'])
         print("店名", item['shore_name'])
         print("销量", item['Sales'])
+        print("商品描述", item['pro_info'])
+        yield item
+
+
 
