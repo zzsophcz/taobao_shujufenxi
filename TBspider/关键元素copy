@@ -1,0 +1,4 @@
+#一页所有商品
+//*[@id="content_items_wrapper"]
+#每个商品
+//*[@id="content_items_wrapper"]/div
