@@ -43,7 +43,7 @@ class TbspiderPipeline:
             price FLOAT,
             sales INT,
             shop VARCHAR(100),
-            link TEXT,
+            link VARCHAR(500) UNIQUE,
             pic_url TEXT,
             description TEXT
         ) CHARSET=utf8mb4;
@@ -62,7 +62,7 @@ class TbspiderPipeline:
         print(f"准备写入数据库，表名：{table_name}")
 
         insert_sql = f"""
-        INSERT INTO `{table_name}` (title, price, sales, shop, link, pic_url, description)
+        INSERT IGNORE INTO `{table_name}` (title, price, sales, shop, link, pic_url, description)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         data = (
@@ -74,10 +74,13 @@ class TbspiderPipeline:
             item['pic_link'],
             item['pro_info']
         )
-        self.cursor.execute(insert_sql, data)
-        # 执行插入
-        print("写入完成")
-        self.conn.commit()
+        try:
+            self.cursor.execute(insert_sql, data)
+            # 执行插入
+            print("写入完成")
+            self.conn.commit()
+        except pymysql.err.IntegrityError as e:
+            print("跳过重复数据:", e)
         return item
 
     def close_spider(self, spider):

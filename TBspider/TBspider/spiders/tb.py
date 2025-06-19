@@ -4,6 +4,7 @@ import pickle
 import urllib.parse
 from TBspider.items import TbspiderItem
 from scrapy_redis.spiders import RedisSpider
+from urllib.parse import urlparse, parse_qs
 
 class TbSpider(RedisSpider):
     name = "tb"
@@ -53,7 +54,8 @@ class TbSpider(RedisSpider):
         print("一共有",len(product_list),"个商品")
         #保留关键词以便动态建表名
         keyword = response.meta.get('keyword')
-
+        #传入page方便输入后翻页
+        page = self.extract_page_from_url(response.url)+1
         for item in product_list:
             detail_url=response.urljoin(item.xpath('./a/@href').extract_first())
             pic_url=item.xpath('.//img[@class="mainPic--Ds3X7I8z"]/@src').extract_first()
@@ -64,15 +66,20 @@ class TbSpider(RedisSpider):
                 meta={"selenium": 'True',"pic_url": pic_url,'keyword': keyword},
                 cookies=response.request.cookies
             )
-            # break
-        # next_url=response.urljoin(item.xpath('./a/@href').extract_first())
-        # #提交翻页请求
-        # yield scrapy.Request(
-        #     url=next_url,
-        #     callback=self.parseSearch,
-        #     meta={"selenium": "True"},
-        #     cookies=response.request.cookies
-        #     )
+            break
+        button_is_exist=response.xpath('//button[@disabled and contains(@class,"next-btn")]/span/text()').extract_first()
+        if button_is_exist=="上一页" or button_is_exist==None:
+            print("有下一页，提交翻页请求")
+            #提交翻页请求
+            yield scrapy.Request(
+                url=response.url,
+                callback=self.parseSearch,
+                meta={"selenium": "search",'page': page,'keyword': keyword},
+                # headers={
+                #     'Referer': response.url
+                # },
+                cookies=response.request.cookies
+                )
 
     @staticmethod
     def clean_sales(sales_str):
@@ -86,6 +93,17 @@ class TbSpider(RedisSpider):
             return int(float(sales_str.replace('万', '')) * 10000)
         else:
             return int(float(sales_str))
+    @staticmethod
+    def extract_page_from_url(url):
+        """
+        传入的url提取其中的page
+        :param url:https://s.taobao.com/search?page=2&q=固态sd10
+        :return:2
+        """
+        parsed = urlparse(url)#把 URL 拆成结构体，返回一个 ParseResult 对象
+        query_params = parse_qs(parsed.query)#把 'page=2&q=固态sd10' 变成字典
+        page_list = query_params.get('page', ['1'])  # 默认值为1
+        return int(page_list[0])
 
     def parseDetail(self, response):
         print("进入详情页面:",response.url)

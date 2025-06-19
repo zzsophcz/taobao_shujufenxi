@@ -8,8 +8,9 @@
 import redis
 import json
 r = redis.Redis(host='localhost', port=6379)
-
-start_url = "https://s.taobao.com/search?q=固态铠侠sd10"
-meta = {"keyword": "固态铠侠sd10"}
+# keyword=input("请输入搜索关键词")
+keyword="铠侠sd10"
+start_url = f"https://s.taobao.com/search?q={keyword}"
+meta = {"keyword":keyword}
 item = json.dumps({"url": start_url, "meta": meta})
 r.lpush("tb:start_urls", item)

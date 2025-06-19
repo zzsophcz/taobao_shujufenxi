@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from scrapy.http import HtmlResponse
 
+
 def smart_scroll(driver, pause_time=2, max_no_change=3):
     """
     智能滚动页面，直到主图数量不再增长。
@@ -22,9 +23,9 @@ def smart_scroll(driver, pause_time=2, max_no_change=3):
     :param pause_time: 每次滚动后的等待时间
     :param max_no_change: 连续几次无增长就认为加载完了
     """
-    #窗口最大化
+    # 窗口最大化
     driver.maximize_window()
-    #寻找主图的选择器
+    # 寻找主图的选择器
     item_selector = '//*[@id="content_items_wrapper"]/div//img[@class="mainPic--Ds3X7I8z"]'
 
     last_count = 0
@@ -58,6 +59,62 @@ def smart_scroll(driver, pause_time=2, max_no_change=3):
 
     print(f"滚动完成，最终主图数量: {last_count}")
 
+def goto_page(driver, page_num):
+    """
+    设置跳转页码并跳转
+    :param driver:
+    :param page_num: 要在跳转框中输入的数字
+    :return: 是否成功
+    """
+    try:
+        #要先下滑到最下面才找得到
+
+        #滑倒最下面
+        print("滑动到最下面")
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)  # 等待加载更多内容
+
+        input_box = driver.find_element(By.XPATH, '//div[@class="next-pagination-pages"]//input')
+        submit_btn = driver.find_element(By.XPATH, '//div[@class="next-pagination-pages"]/button[last()]')
+        input_box.clear()
+        input_box.send_keys(str(page_num))
+        submit_btn.click()
+        time.sleep(3)  # 等待加载
+        return True
+    except Exception as e:
+        print(f"跳转第 {page_num} 页失败：", e)
+        print("该网址没有跳转输入框，使用另外的逻辑")
+        return click_nextPage(driver, page_num)
+
+
+def click_nextPage(driver,page_num):
+    """
+    根据传入的数字不断点击下一页
+    :param driver:
+    :param page_num:
+    :return:
+    """
+    print(f"[INFO] 目标页码: 第 {page_num} 页")
+
+    for i in range(1, page_num):
+        try:
+            # 等待“下一页”按钮可点击
+            button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, '//div[contains(@class,"next-pagination-pages")]//button[last()]'))
+            )
+            # 点击
+            driver.execute_script("arguments[0].click();", button)
+            time.sleep(3)  # 等页面加载
+            # 滑倒最下面
+            total_height = driver.execute_script("return document.body.scrollHeight")
+            time.sleep(1)
+        except Exception as e:
+            print(f"[ERROR] 第 {i + 1} 页跳转失败：{e}")
+            return False
+    return True
+
+
 class SeleniumSpiderMiddleware(object):
     def __init__(self):
         print("[*] 初始化共享 Selenium 浏览器...")
@@ -89,6 +146,8 @@ class SeleniumSpiderMiddleware(object):
                 return self.enter_detail(request)
             elif sel_flag == "search":
                 return self.enter_search(request)
+            elif sel_flag == "page_change":
+                return self.enter_page_change(request)
             elif sel_flag == "True":
                 return self.default_handle(request)
             else:
@@ -132,7 +191,7 @@ class SeleniumSpiderMiddleware(object):
             url=driver.current_url,
             body=html,
             encoding='utf-8',
-            request=request #这里是为了保留原请求的meta参数
+            request=request  # 这里是为了保留原请求的meta参数
         )
 
     def enter_detail(self, request):
@@ -142,6 +201,48 @@ class SeleniumSpiderMiddleware(object):
         driver = self.driver
         url = request.url
         print("进入搜索页面处理模式，此时的url是：", url)
+        page = request.meta.get('page',1)
+        print("请求目标页码:", page)
+
+        cookies_dict = request.cookies
+        # 第二步：注入 cookies
+        if not self.cookies_injected:
+            driver.get("https://www.taobao.com/")
+            time.sleep(1)
+            for name, value in cookies_dict.items():
+                cookie = {'name': name, 'value': value, 'domain': '.taobao.com'}
+                try:
+                    driver.add_cookie(cookie)
+                except Exception as e:
+                    print("cookie 加载失败:", e)
+            self.cookies_injected = True
+        # 第三步：访问目标页面
+        if page == 1:
+            driver.get(url)
+        else:
+            driver.get(url)
+            time.sleep(3)
+            goto_page(driver, page)
+
+        time.sleep(3)  # 适当等待页面加载
+        # 在这里添加下滑获取图片
+        smart_scroll(driver)
+        # 第四步：获取页面源代码
+        print("最后返回的页面源代码的url:", driver.current_url)
+        html = driver.page_source
+        # input("暂停查看网页源代码")
+        # 第五步：构造 HtmlResponse 对象返回
+        return HtmlResponse(
+            url=driver.current_url,
+            body=html,
+            encoding='utf-8',
+            request=request
+        )
+
+    def enter_page_change(self, request):
+        driver = self.driver
+        url = request.url
+        print("进入翻页处理模式，此时的url是：", url)
         cookies_dict = request.cookies
         # 第二步：注入 cookies
         if not self.cookies_injected:
@@ -157,8 +258,16 @@ class SeleniumSpiderMiddleware(object):
         # 第三步：访问目标页面
         driver.get(url)
         time.sleep(3)  # 适当等待页面加载
-        #在这里添加下滑获取图片
-        smart_scroll(driver)
+        # 在这添加点击按钮翻页逻辑
+        try:
+            button = WebDriverWait(driver, 4).until(
+                EC.element_to_be_clickable((By.XPATH, '//div[@class="next-pagination-pages"]/button[2]'))
+            )
+            driver.execute_script("arguments[0].click();", button)
+            time.sleep(3)
+        except Exception as e:
+            # print(f"[!] 没有找到下一页按钮！: {e}")
+            print("没有找到下一页按钮！")
         # 第四步：获取页面源代码
         print("最后返回的页面源代码的url:", driver.current_url)
         html = driver.page_source
