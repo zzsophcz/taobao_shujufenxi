@@ -64,9 +64,10 @@ class TbSpider(RedisSpider):
                 url=detail_url,
                 callback=self.parseDetail,
                 meta={"selenium": 'True',"pic_url": pic_url,'keyword': keyword},
+                dont_filter=True,  # ✅ 忽略去重机制，允许重复请求
                 cookies=response.request.cookies
             )
-            break
+
         button_is_exist=response.xpath('//button[@disabled and contains(@class,"next-btn")]/span/text()').extract_first()
         if button_is_exist=="上一页" or button_is_exist==None:
             print("有下一页，提交翻页请求")
@@ -75,9 +76,7 @@ class TbSpider(RedisSpider):
                 url=response.url,
                 callback=self.parseSearch,
                 meta={"selenium": "search",'page': page,'keyword': keyword},
-                # headers={
-                #     'Referer': response.url
-                # },
+                dont_filter=True,
                 cookies=response.request.cookies
                 )
 

@@ -14,9 +14,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from scrapy.http import HtmlResponse
+from selenium.webdriver.common.keys import Keys
 
 
-def smart_scroll(driver, pause_time=2, max_no_change=3):
+def smart_scroll(driver, pause_time=2, max_no_change=2):
     """
     智能滚动页面，直到主图数量不再增长。
     :param driver: selenium WebDriver
@@ -59,6 +60,7 @@ def smart_scroll(driver, pause_time=2, max_no_change=3):
 
     print(f"滚动完成，最终主图数量: {last_count}")
 
+
 def goto_page(driver, page_num):
     """
     设置跳转页码并跳转
@@ -67,9 +69,10 @@ def goto_page(driver, page_num):
     :return: 是否成功
     """
     try:
-        #要先下滑到最下面才找得到
-
-        #滑倒最下面
+        # 设置窗口大小，这样跳转框会出来
+        driver.set_window_size(1100, 600)
+        time.sleep(2)
+        # 滑倒最下面
         print("滑动到最下面")
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(2)  # 等待加载更多内容
@@ -78,16 +81,18 @@ def goto_page(driver, page_num):
         submit_btn = driver.find_element(By.XPATH, '//div[@class="next-pagination-pages"]/button[last()]')
         input_box.clear()
         input_box.send_keys(str(page_num))
-        submit_btn.click()
+        print("输入的页码：",str(page_num))
+        time.sleep(1)
+        input_box.send_keys(Keys.ENTER)
+        # driver.execute_script("arguments[0].click();", submit_btn)
         time.sleep(3)  # 等待加载
-        return True
+
     except Exception as e:
-        print(f"跳转第 {page_num} 页失败：", e)
+        print(f"跳转第{page_num}页失败：", e)
         print("该网址没有跳转输入框，使用另外的逻辑")
-        return click_nextPage(driver, page_num)
 
 
-def click_nextPage(driver,page_num):
+def click_nextPage(driver, page_num):
     """
     根据传入的数字不断点击下一页
     :param driver:
@@ -201,7 +206,7 @@ class SeleniumSpiderMiddleware(object):
         driver = self.driver
         url = request.url
         print("进入搜索页面处理模式，此时的url是：", url)
-        page = request.meta.get('page',1)
+        page = request.meta.get('page', 1)
         print("请求目标页码:", page)
 
         cookies_dict = request.cookies
@@ -222,7 +227,8 @@ class SeleniumSpiderMiddleware(object):
         else:
             driver.get(url)
             time.sleep(3)
-            goto_page(driver, page)
+            print("传入的page是:",page)
+            goto_page(driver,page)
 
         time.sleep(3)  # 适当等待页面加载
         # 在这里添加下滑获取图片

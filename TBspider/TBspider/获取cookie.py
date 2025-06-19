@@ -14,6 +14,7 @@
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 import time
 import pickle
 
@@ -48,11 +49,34 @@ for cookie in cookies:
         print("添加 cookie 出错：", e)
 
 # 第三步：访问登录后页面
-driver.get("https://s.taobao.com/search?q=%E5%9B%BA%E6%80%81%E9%93%A0%E4%BE%A0sd10&page=1")
+driver.get("https://s.taobao.com/search?page=1&q=%E9%93%A0%E4%BE%A0sd10&tab=all")
+try:
+    # 设置窗口大小，这样跳转框会出来
+    driver.set_window_size(966, 600)
+    time.sleep(1)
+    # 滑倒最下面
+    print("滑动到最下面")
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(2)  # 等待加载更多内容
+
+    input_box = driver.find_element(By.XPATH, '//div[@class="next-pagination-pages"]//input')
+    submit_btn = driver.find_element(By.XPATH, '//div[@class="next-pagination-pages"]/button[last()]')
+    input_box.clear()
+    input_box.send_keys(3)
+    time.sleep(2)
+    # input_box.send_keys(Keys.ENTER)#这个可以
+    # driver.execute_script("arguments[0].click();", submit_btn)#为啥不行？
+
+    time.sleep(3)  # 等待加载
+
+except Exception as e:
+    print(f"跳转第 2 页失败：", e)
+    print("该网址没有跳转输入框，使用另外的逻辑")
 time.sleep(3)
 
+input("等待....")
 # 第四步：检查是否登录成功（是否含有用户元素）
-print(driver.page_source)
+# print(driver.page_source)
 
 driver.quit()
 
