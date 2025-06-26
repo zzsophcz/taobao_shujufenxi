@@ -15,6 +15,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from scrapy.http import HtmlResponse
 from selenium.webdriver.common.keys import Keys
+import random
+from TBspider.settings import USER_AGENT_LIST
 
 
 def smart_scroll(driver, pause_time=2, max_no_change=2):
@@ -127,6 +129,9 @@ class SeleniumSpiderMiddleware(object):
         # options.add_argument("--headless")  # 可选：无头模式
         # options.add_argument("--disable-gpu")
         # options.add_argument("--no-sandbox")
+        #添加随机用户代理
+        options.add_argument(f"user-agent={random.choice(USER_AGENT_LIST)}")
+
         self.driver = webdriver.Chrome(options=options)
         self.cookies_injected = False
 
@@ -186,11 +191,15 @@ class SeleniumSpiderMiddleware(object):
         time.sleep(3)  # 适当等待页面加载
 
         # 第四步：获取页面源代码
-        print("最后返回的页面源代码的url:", driver.current_url)
+
+        print("页面标题栏",driver.title)
+        if driver.title=="验证码拦截":
+            input("请手动滑块解除验证后回车确认！")
+        time.sleep(2)
         html = driver.page_source
 
         # input("暂停查看网页源代码")
-
+        print("最后返回的页面源代码的url:", driver.current_url)
         # 第五步：构造 HtmlResponse 对象返回
         return HtmlResponse(
             url=driver.current_url,
@@ -245,43 +254,4 @@ class SeleniumSpiderMiddleware(object):
             request=request
         )
 
-    def enter_page_change(self, request):
-        driver = self.driver
-        url = request.url
-        print("进入翻页处理模式，此时的url是：", url)
-        cookies_dict = request.cookies
-        # 第二步：注入 cookies
-        if not self.cookies_injected:
-            driver.get("https://www.taobao.com/")
-            time.sleep(1)
-            for name, value in cookies_dict.items():
-                cookie = {'name': name, 'value': value, 'domain': '.taobao.com'}
-                try:
-                    driver.add_cookie(cookie)
-                except Exception as e:
-                    print("cookie 加载失败:", e)
-            self.cookies_injected = True
-        # 第三步：访问目标页面
-        driver.get(url)
-        time.sleep(3)  # 适当等待页面加载
-        # 在这添加点击按钮翻页逻辑
-        try:
-            button = WebDriverWait(driver, 4).until(
-                EC.element_to_be_clickable((By.XPATH, '//div[@class="next-pagination-pages"]/button[2]'))
-            )
-            driver.execute_script("arguments[0].click();", button)
-            time.sleep(3)
-        except Exception as e:
-            # print(f"[!] 没有找到下一页按钮！: {e}")
-            print("没有找到下一页按钮！")
-        # 第四步：获取页面源代码
-        print("最后返回的页面源代码的url:", driver.current_url)
-        html = driver.page_source
-        # input("暂停查看网页源代码")
-        # 第五步：构造 HtmlResponse 对象返回
-        return HtmlResponse(
-            url=driver.current_url,
-            body=html,
-            encoding='utf-8',
-            request=request
-        )
+

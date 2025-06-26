@@ -5,6 +5,8 @@ import urllib.parse
 from TBspider.items import TbspiderItem
 from scrapy_redis.spiders import RedisSpider
 from urllib.parse import urlparse, parse_qs
+from TBspider.settings import accounts
+import random
 
 class TbSpider(RedisSpider):
     name = "tb"
@@ -17,17 +19,15 @@ class TbSpider(RedisSpider):
         self.allowed_domains = list(filter(None, domain.split(',')))
         super(TbSpider,self).__init__(*args, **kwargs)
 
-        # if keyword is None:
-        #     raise ValueError("请使用 -a keyword=xxx 指定搜索关键词")
-        # self.keyword = keyword#方便后续取用
-        # encoded = urllib.parse.quote(keyword)
-        # self.start_urls = [f"https://s.taobao.com/search?q={encoded}"]
-
     def parse(self, response):
         # 加载 cookies（只在首次请求时用）
         # 当前文件在/spiders 中，向上1层才能到项目根目录
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cookie_path = os.path.join(BASE_DIR, 'pixiv_cookies.pkl')
+
+        # 随机选择一个账号
+        account = random.choice(accounts)
+        username = account["username"]
+        cookie_path = os.path.join(BASE_DIR, f'pixiv_cookies_{username}.pkl')
 
         with open(cookie_path, 'rb') as f:
             cookies_list = pickle.load(f)
@@ -64,7 +64,7 @@ class TbSpider(RedisSpider):
                 url=detail_url,
                 callback=self.parseDetail,
                 meta={"selenium": 'True',"pic_url": pic_url,'keyword': keyword},
-                dont_filter=True,  # ✅ 忽略去重机制，允许重复请求
+                # dont_filter=True,  # ✅ 忽略去重机制，允许重复请求
                 cookies=response.request.cookies
             )
 

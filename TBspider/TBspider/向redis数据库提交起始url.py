@@ -9,7 +9,7 @@ import redis
 import json
 r = redis.Redis(host='localhost', port=6379)
 # keyword=input("请输入搜索关键词")
-keyword="自行车"
+keyword="路由器"
 start_url = f"https://s.taobao.com/search?q={keyword}"
 meta = {"keyword":keyword}
 item = json.dumps({"url": start_url, "meta": meta})
