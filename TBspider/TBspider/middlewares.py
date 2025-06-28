@@ -168,10 +168,10 @@ class SeleniumSpiderMiddleware(object):
             return None
 
     def default_handle(self, request):
-        print("常规 selenium 模式，即获取网页源代码，不做任何selenium处理")
+        # print("常规 selenium 模式，即获取网页源代码，不做任何selenium处理")
         driver = self.driver
         url = request.url
-        print("中间件进入常规页面处理，此时的url是：", url)
+        # print("中间件进入常规页面处理，此时的url是：", url)
         cookies_dict = request.cookies
 
         # 第二步：注入 cookies
@@ -193,13 +193,13 @@ class SeleniumSpiderMiddleware(object):
         # 第四步：获取页面源代码
 
         print("页面标题栏",driver.title)
-        if driver.title=="验证码拦截":
+        if driver.title=="验证码拦截" or driver.title=="商品详情":
             input("请手动滑块解除验证后回车确认！")
         time.sleep(2)
         html = driver.page_source
 
         # input("暂停查看网页源代码")
-        print("最后返回的页面源代码的url:", driver.current_url)
+        # print("最后返回的页面源代码的url:", driver.current_url)
         # 第五步：构造 HtmlResponse 对象返回
         return HtmlResponse(
             url=driver.current_url,
@@ -243,7 +243,7 @@ class SeleniumSpiderMiddleware(object):
         # 在这里添加下滑获取图片
         smart_scroll(driver)
         # 第四步：获取页面源代码
-        print("最后返回的页面源代码的url:", driver.current_url)
+        # print("最后返回的页面源代码的url:", driver.current_url)
         html = driver.page_source
         # input("暂停查看网页源代码")
         # 第五步：构造 HtmlResponse 对象返回

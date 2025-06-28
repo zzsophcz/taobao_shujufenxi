@@ -22,9 +22,12 @@ import pickle
 from TBspider.settings import accounts
 
 # 随机选择一个账号
-account = random.choice(accounts)
-username = account["username"]
-password = account["password"]
+# account = random.choice(accounts)
+# username = account["username"]
+# password = account["password"]
+
+username = "18022590533"
+password = "as8823854"
 
 # 初始化浏览器
 options = webdriver.ChromeOptions()

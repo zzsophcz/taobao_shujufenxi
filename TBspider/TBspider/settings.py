@@ -28,8 +28,8 @@ USER_AGENT_LIST = [
     "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE"]
 
 accounts = [
-    {"username": "18822946896", "password": "as8823854"},
-    {"username": "18022590533", "password": "as8823854"},
+    {"username": "18822946896", "password": "as8823854"}
+    # {"username": "18022590533", "password": "as8823854"},
 ]
 
 # Obey robots.txt rules

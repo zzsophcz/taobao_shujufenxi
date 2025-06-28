@@ -7,6 +7,7 @@ from scrapy_redis.spiders import RedisSpider
 from urllib.parse import urlparse, parse_qs
 from TBspider.settings import accounts
 import random
+import redis
 
 class TbSpider(RedisSpider):
     name = "tb"
@@ -15,25 +16,36 @@ class TbSpider(RedisSpider):
 
     def __init__(self, keyword=None, *args, **kwargs):
 
+        # 初始化Redis连接
+        self.redis_conn = redis.Redis(
+            host='127.0.0.1',  # 替换为你的Redis地址
+            port=6379,
+            db=0,
+            decode_responses=False
+        )
+        # 安全获取一个账号（阻塞式）
+        account_data = self.redis_conn.blpop('available_accounts', timeout=30)
+        if not account_data:
+            raise RuntimeError("No available accounts in Redis!")
+
+        self.account = pickle.loads(account_data[1])
+        self._load_cookie_for_account(self.account)
+
+
         domain = kwargs.pop('domain', '')
         self.allowed_domains = list(filter(None, domain.split(',')))
         super(TbSpider,self).__init__(*args, **kwargs)
 
-    def parse(self, response):
-        # 加载 cookies（只在首次请求时用）
-        # 当前文件在/spiders 中，向上1层才能到项目根目录
+    def _load_cookie_for_account(self, account):
+        """加载指定账号的Cookie"""
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-        # 随机选择一个账号
-        account = random.choice(accounts)
-        username = account["username"]
-        cookie_path = os.path.join(BASE_DIR, f'pixiv_cookies_{username}.pkl')
+        cookie_path = os.path.join(BASE_DIR, f'pixiv_cookies_{account["username"]}.pkl')
 
         with open(cookie_path, 'rb') as f:
             cookies_list = pickle.load(f)
+        self.cookies_dict = {c['name']: c['value'] for c in cookies_list}
 
-        cookies_dict = {c['name']: c['value'] for c in cookies_list}
-
+    def parse(self, response):
         #接受命令行中的关键词
         keyword = response.meta.get('keyword')
         # 构造一个新的请求（携带 cookie）
@@ -41,12 +53,17 @@ class TbSpider(RedisSpider):
             url=response.url,
             callback=self.parseSearch,
             meta={"selenium": "search",'keyword': keyword},
-            cookies=cookies_dict,
+            cookies=self.cookies_dict,
             dont_filter=True
         )
 
+    def close(self, reason):
+        """爬虫关闭时释放账号回池"""
+        self.redis_conn.rpush('available_accounts', pickle.dumps(self.account))
+        super().close(reason)
+
     def parseSearch(self, response):
-        print("进入搜索页面：",response.url)
+        # print("进入搜索页面：",response.url)
         # # #保存网页源代码
         # with open("搜索页面.html", "w", encoding="utf-8") as f:
         #     f.write(response.text)
